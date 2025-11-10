@@ -1,125 +1,63 @@
-package me.alpha432.oyvey.features.gui;
+void ShowMinecraftStyleGUI(bool* p_open)
+{
+    ImGui::SetNextWindowSize(ImVec2(420, 220));
+    ImGui::Begin("Mod Menu", p_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 
-import me.alpha432.oyvey.OyVey;
-import me.alpha432.oyvey.features.Feature;
-import me.alpha432.oyvey.features.gui.items.Item;
-import me.alpha432.oyvey.features.gui.items.buttons.ModuleButton;
-import me.alpha432.oyvey.features.modules.Module;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+    // Styling
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f)); // Dark grey
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.0f, 0.6f, 0.9f));       // Neon purple accents
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.1f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.0f, 0.5f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.2f, 0.8f, 1.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
 
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.Comparator;
+    // Minecraft-style font note: you'd load a blocky/pixel font here
+    // ImGui::PushFont(minecraftFont);
 
-public class OyVeyGui extends Screen {
-    private static OyVeyGui INSTANCE;
-    private static Color colorClipboard = null;
+    static int tab = 0;
+    if (ImGui::Button("Combat", ImVec2(200, 25))) tab = 0;
+    ImGui::SameLine();
+    if (ImGui::Button("Misc", ImVec2(200, 25))) tab = 1;
 
-    static {
-        INSTANCE = new OyVeyGui();
+    ImGui::Separator();
+
+    if (tab == 0) // Combat tab
+    {
+        ImGui::Text("Combat Modules:");
+        static bool triggerbot = false, aimassist = false, hitbox = false, staticHeights = false;
+        static int triggerbotMode = 0, aimassistMode = 0;
+        static float hitboxSize = 1.0f;
+        static ImVec4 triggerColor = ImVec4(1, 0, 1, 1);
+        static ImVec4 aimColor = ImVec4(0.8f, 0.2f, 1.0f, 1);
+
+        ImGui::Checkbox("Triggerbot", &triggerbot);
+        ImGui::SameLine();
+        ImGui::ColorEdit3("##TriggerColor", (float*)&triggerColor, ImGuiColorEditFlags_NoInputs);
+
+        ImGui::Checkbox("AimAssist", &aimassist);
+        ImGui::SameLine();
+        ImGui::ColorEdit3("##AimColor", (float*)&aimColor, ImGuiColorEditFlags_NoInputs);
+
+        ImGui::Checkbox("Hitbox", &hitbox);
+        ImGui::SameLine();
+        ImGui::SliderFloat("Size", &hitboxSize, 0.5f, 2.0f);
+
+        ImGui::Checkbox("Static Heights", &staticHeights);
+        ImGui::SameLine();
+        ImGui::Text("Keybind: [Press to set]");
     }
 
-    private final ArrayList<Component> components = new ArrayList<>();
-
-    public OyVeyGui() {
-        super(Text.literal("OyVey"));
-        setInstance();
-        load();
+    else if (tab == 1) // Misc tab
+    {
+        ImGui::Text("Misc Modules:");
+        static bool randomColors = false;
+        ImGui::Checkbox("Color Pick: Use Random Colors", &randomColors);
+        static ImVec4 miscColor = ImVec4(0.6f, 0.3f, 1.0f, 1);
+        ImGui::ColorEdit3("Theme Color", (float*)&miscColor, ImGuiColorEditFlags_NoInputs);
     }
 
-    public static OyVeyGui getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new OyVeyGui();
-        }
-        return INSTANCE;
-    }
-
-    public static OyVeyGui getClickGui() {
-        return OyVeyGui.getInstance();
-    }
-
-    private void setInstance() {
-        INSTANCE = this;
-    }
-
-    private void load() {
-        int x = -84;
-        for (Module.Category category : OyVey.moduleManager.getCategories()) {
-            if (category == Module.Category.HUD) continue;
-            Component panel = new Component(category.getName(), x += 90, 4, true);
-            OyVey.moduleManager.stream()
-                    .filter(m -> m.getCategory() == category && !m.hidden)
-                    .map(ModuleButton::new)
-                    .forEach(panel::addButton);
-            this.components.add(panel);
-        }
-        this.components.forEach(components -> components.getItems().sort(Comparator.comparing(Feature::getName)));
-    }
-
-    @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        Item.context = context;
-        context.fill(0, 0, context.getScaledWindowWidth(), context.getScaledWindowHeight(), new Color(0, 0, 0, 120).hashCode());
-        this.components.forEach(components -> components.drawScreen(context, mouseX, mouseY, delta));
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int clickedButton) {
-        this.components.forEach(components -> components.mouseClicked((int) mouseX, (int) mouseY, clickedButton));
-        return super.mouseClicked(mouseX, mouseY, clickedButton);
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int releaseButton) {
-        this.components.forEach(components -> components.mouseReleased((int) mouseX, (int) mouseY, releaseButton));
-        return super.mouseReleased(mouseX, mouseY, releaseButton);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (verticalAmount < 0) {
-            this.components.forEach(component -> component.setY(component.getY() - 10));
-        } else if (verticalAmount > 0) {
-            this.components.forEach(component -> component.setY(component.getY() + 10));
-        }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        this.components.forEach(component -> component.onKeyPressed(keyCode));
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean charTyped(char chr, int modifiers) {
-        this.components.forEach(component -> component.onKeyTyped(chr, modifiers));
-        return super.charTyped(chr, modifiers);
-    }
-
-    @Override
-    public boolean shouldPause() {
-        return false;
-    }
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-    }//ignore 1.21.8 blur thing
-
-    public final ArrayList<Component> getComponents() {
-        return this.components;
-    }
-
-    public int getTextOffset() {
-        return -6;
-    }
-
-    public static Color getColorClipboard() {
-        return colorClipboard;
-    }
-
-    public static void setColorClipboard(Color color) {
-        colorClipboard = color;
-    }
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(5);
+    ImGui::End();
 }
